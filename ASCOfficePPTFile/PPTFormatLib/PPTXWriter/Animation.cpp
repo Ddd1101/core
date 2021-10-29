@@ -493,10 +493,13 @@ void Animation::FillBldLst(
         {
             CRecordParaBuildContainer *pRec =
                     (CRecordParaBuildContainer*)pBLC->n_arrRgChildRec[i];
-            PPTX::Logic::BldP *pBldP = new PPTX::Logic::BldP();
-            FillBldP(pRec, *pBldP);
+            if (pRec->m_oBuildAtom.m_nShapeIdRef != 11302)
+            {
+                PPTX::Logic::BldP *pBldP = new PPTX::Logic::BldP();
+                FillBldP(pRec, *pBldP);
 
-            oBuildNodeBase.m_node = pBldP;
+                oBuildNodeBase.m_node = pBldP;
+            }
             break;
         }
         case RT_ChartBuild:
@@ -649,11 +652,17 @@ void Animation::FillCBhvr(
 
     if (pBhvr->m_oClientVisualElement.m_bVisualShapeAtom)
     {
+        UINT spid = pBhvr->
+                m_oClientVisualElement.
+                m_oVisualShapeAtom.m_nObjectIdRef;
+//        if (spid == 11302)
+//            spid = 11324;
+//        if (spid == 11317)
+//            spid = 11329;
+
         oBhvr.tgtEl.spTgt = new PPTX::Logic::SpTgt();
         oBhvr.tgtEl.spTgt->spid =
-                std::to_wstring(pBhvr->
-                                m_oClientVisualElement.
-                                m_oVisualShapeAtom.m_nObjectIdRef);
+                std::to_wstring(spid);
         if (m_currentBldP)
         {
             m_currentBldP->spid =
@@ -780,6 +789,7 @@ void Animation::FillCTn(
         PPTX::Logic::CTn &oCTn)
 {
     oCTn.id = m_cTnId++;
+    m_cTnDeep++;
 
     // Reading TimeNodeAtom
     const auto &oTimeNodeAtom = pETNC->m_oTimeNodeAtom;
@@ -812,15 +822,14 @@ void Animation::FillCTn(
     } else if (pETNC->m_haveTimePropertyList)
     {
         // TODO not work
-        oCTn.nodeType = new PPTX::Limit::TLNodeType;
-        if (m_cTnState == 0){
+        if (m_cTnDeep == 3){
+            oCTn.nodeType = new PPTX::Limit::TLNodeType;
             oCTn.nodeType->set(L"clickPar");
-            m_cTnState = 1;
         }
-        else
+        else if (m_cTnDeep == 4)
         {
+            oCTn.nodeType = new PPTX::Limit::TLNodeType;
             oCTn.nodeType->set(L"withGroup");
-            m_cTnState = 0;
         }
     }
 
@@ -979,6 +988,8 @@ void Animation::FillCTn(
         oCTn.stCondLst->node_name = L"stCondLst";
         FillStCondLst(pETNC->m_arrRgBeginTimeCondition, oCTn.stCondLst.get2());
     }
+
+    m_cTnDeep--;
 }
 
 void Animation::FillStCondLst(const std::vector<CRecordTimeConditionContainer *> &timeCondCont,
